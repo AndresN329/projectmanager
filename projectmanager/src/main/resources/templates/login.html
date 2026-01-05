@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Login</title>
+    <style>
+        body { font-family: system-ui, Arial; max-width: 520px; margin: 40px auto; padding: 0 16px; }
+        .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+        input { width: 100%; padding: 10px; margin: 8px 0 12px; border: 1px solid #ccc; border-radius: 8px; }
+        button { padding: 10px 14px; border: 0; border-radius: 10px; cursor: pointer; }
+        .row { display: flex; gap: 10px; }
+        .error { color: #b00020; white-space: pre-wrap; }
+        small { color: #666; }
+    </style>
+</head>
+<body>
+<h2>Project Manager</h2>
+<div class="card">
+    <label>Email</label>
+    <input id="email" type="email" placeholder="coder@riwi.com" />
+    <label>Password</label>
+    <input id="password" type="password" placeholder="123456" />
+
+    <div class="row">
+        <button onclick="login()">Entrar</button>
+        <button onclick="logout()" style="background:#eee;">Limpiar token</button>
+    </div>
+
+    <p class="error" id="msg"></p>
+    <small>Tip: abre Swagger solo para depurar; aquí usamos fetch con JWT.</small>
+</div>
+
+<script>
+    const API = "/api";
+
+    function setMsg(t){ document.getElementById("msg").textContent = t || ""; }
+
+    async function login(){
+      setMsg("");
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value.trim();
+
+      try {
+        const res = await fetch(`${API}/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password })
+        });
+
+        const text = await res.text();
+        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+
+        // soporta: token como string o como {token:"..."}
+        let token = text;
+        try {
+          const json = JSON.parse(text);
+          token = json.token ?? text;
+        } catch(_) {}
+
+        token = (token || "").replaceAll('"', "").trim();
+        if (!token) return setMsg("Login ok pero token vacío.");
+
+        localStorage.setItem("token", token);
+        window.location.href = "/projects";
+      } catch (e) {
+        setMsg(String(e));
+      }
+    }
+
+    function logout(){
+      localStorage.removeItem("token");
+      setMsg("Token eliminado.");
+    }
+</script>
+</body>
+</html>

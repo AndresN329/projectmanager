@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Proyecto</title>
+    <style>
+        body { font-family: system-ui, Arial; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+        .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; min-width: 240px; }
+        button { padding: 10px 14px; border: 0; border-radius: 10px; cursor:pointer; }
+        .muted { color:#666; }
+        .error { color:#b00020; white-space: pre-wrap; }
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align:left; }
+        code { background:#f6f6f6; padding: 2px 6px; border-radius: 6px; }
+    </style>
+</head>
+<body>
+
+<div class="row" style="justify-content:space-between;">
+    <div>
+        <h2>Proyecto</h2>
+        <div class="muted">ID: <code id="pid"></code></div>
+    </div>
+    <div class="row">
+        <button onclick="goProjects()" style="background:#eee;">Volver</button>
+        <button onclick="logout()" style="background:#eee;">Logout</button>
+    </div>
+</div>
+
+<!-- Crear task -->
+<div class="row" style="margin-top:14px;">
+    <input id="title" placeholder="Título de la tarea" />
+    <button onclick="createTask()">Crear tarea</button>
+    <button onclick="loadTasks()" style="background:#eee;">Refrescar</button>
+</div>
+
+<p class="error" id="msg"></p>
+
+<!-- Lista de tasks -->
+<table>
+    <thead>
+    <tr>
+        <th>Título</th>
+        <th>Estado</th>
+        <th>ID</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody id="tbody">
+    <tr><td class="muted" colspan="4">Cargando...</td></tr>
+    </tbody>
+</table>
+
+<script>
+    const API = "/api";
+    const projectId = window.location.pathname.split("/").pop();
+    document.getElementById("pid").textContent = projectId;
+    const tbody = document.getElementById("tbody");
+
+    function token(){ return localStorage.getItem("token"); }
+    function authHeaders(){
+      const t = token();
+      if (!t) throw new Error("No hay token. Ve a /login");
+      return { "Authorization": "Bearer " + t };
+    }
+    function setMsg(t){ document.getElementById("msg").textContent = t || ""; }
+    function goProjects(){ window.location.href="/projects"; }
+    function logout(){ localStorage.removeItem("token"); window.location.href="/login"; }
+
+    async function loadTasks(){
+      setMsg("");
+      tbody.innerHTML = `<tr><td class="muted" colspan="4">Cargando...</td></tr>`;
+      try {
+        const res = await fetch(`${API}/projects/${projectId}/tasks`, {
+          headers: authHeaders()
+        });
+        const text = await res.text();
+        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+
+        const tasks = JSON.parse(text);
+        if (!tasks.length){
+          tbody.innerHTML = `<tr><td class="muted" colspan="4">Sin tareas</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = tasks.map(t => `
+          <tr>
+            <td>${escapeHtml(t.title)}</td>
+            <td>${t.completed ? "COMPLETADA" : "PENDIENTE"}</td>
+            <td class="muted">${t.id}</td>
+            <td>
+              ${t.completed ? "" :
+                `<button onclick="completeTask('${t.id}')" style="background:#eee;">Completar</button>`}
+            </td>
+          </tr>
+        `).join("");
+      } catch(e){
+        setMsg(String(e));
+        tbody.innerHTML = `<tr><td class="muted" colspan="4">Error</td></tr>`;
+      }
+    }
+
+    async function createTask(){
+      setMsg("");
+      const title = document.getElementById("title").value.trim();
+      if (!title) return setMsg("Título requerido");
+
+      try {
+        const res = await fetch(`${API}/projects/${projectId}/tasks`, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ title })
+        });
+
+        const text = await res.text();
+        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+
+        document.getElementById("title").value = "";
+        await loadTasks();
+      } catch(e){
+        setMsg(String(e));
+      }
+    }
+
+    async function completeTask(taskId){
+      setMsg("");
+      try {
+        const res = await fetch(`${API}/tasks/${taskId}/complete`, {
+          method: "PATCH",
+          headers: authHeaders()
+        });
+        const text = await res.text();
+        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+        await loadTasks();
+      } catch(e){
+        setMsg(String(e));
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "").replace(/[&<>"']/g, m =>
+        ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+      );
+    }
+
+    loadTasks();
+</script>
+</body>
+</html>

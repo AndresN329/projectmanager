@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Projects</title>
+    <style>
+        body { font-family: system-ui, Arial; max-width: 900px; margin: 40px auto; padding: 0 16px; }
+        .row { display:flex; gap:10px; align-items:center; flex-wrap: wrap; }
+        input { padding: 10px; border: 1px solid #ccc; border-radius: 8px; min-width: 240px; }
+        button { padding: 10px 14px; border: 0; border-radius: 10px; cursor:pointer; }
+        table { width: 100%; border-collapse: collapse; margin-top: 14px; }
+        th, td { border-bottom: 1px solid #eee; padding: 10px; text-align:left; }
+        .muted { color:#666; }
+        .error { color:#b00020; white-space: pre-wrap; }
+        a { color: inherit; }
+    </style>
+</head>
+<body>
+<div class="row" style="justify-content:space-between;">
+    <h2>Mis proyectos</h2>
+    <div class="row">
+        <button onclick="goLogin()" style="background:#eee;">Login</button>
+        <button onclick="logout()" style="background:#eee;">Logout</button>
+    </div>
+</div>
+
+<div class="row">
+    <input id="name" placeholder="Nombre del proyecto" />
+    <button onclick="createProject()">Crear</button>
+    <button onclick="loadProjects()" style="background:#eee;">Refrescar</button>
+</div>
+
+<p class="error" id="msg"></p>
+
+<table>
+    <thead>
+    <tr><th>Nombre</th><th>Status</th><th>ID</th></tr>
+    </thead>
+    <tbody id="tbody">
+    <tr><td class="muted" colspan="3">Cargando...</td></tr>
+    </tbody>
+</table>
+
+<script>
+    const API = "/api";
+    const tbody = document.getElementById("tbody");
+
+    function token(){
+      return localStorage.getItem("token");
+    }
+    function authHeaders(){
+      const t = token();
+      if (!t) throw new Error("No hay token. Ve a /login");
+      return { "Authorization": "Bearer " + t };
+    }
+    function setMsg(t){ document.getElementById("msg").textContent = t || ""; }
+
+    function goLogin(){ window.location.href="/login"; }
+    function logout(){ localStorage.removeItem("token"); window.location.href="/login"; }
+
+    async function loadProjects(){
+      setMsg("");
+      tbody.innerHTML = `<tr><td class="muted" colspan="3">Cargando...</td></tr>`;
+      try {
+        const res = await fetch(`${API}/projects`, { headers: authHeaders() });
+        const text = await res.text();
+        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+
+        const data = JSON.parse(text);
+        if (!Array.isArray(data) || data.length === 0){
+          tbody.innerHTML = `<tr><td class="muted" colspan="3">Sin proyectos</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = data.map(p => `
+          <tr>
+            <td><a href="/projects/${p.id}">${escapeHtml(p.name)}</a></td>
+            <td>${escapeHtml(p.status)}</td>
+            <td class="muted">${p.id}</td>
+          </tr>
+        `).join("");
+      } catch (e) {
+        setMsg(String(e));
+        tbody.innerHTML = `<tr><td class="muted" colspan="3">Error</td></tr>`;
+      }
+    }
+
+    async function createProject(){
+      setMsg("");
+      const name = document.getElementById("name").value.trim();
+      if (!name) return setMsg("Nombre requerido");
+
+      try {
+        const res = await fetch(`${API}/projects`, {
+          method: "POST",
+          headers: { ...authHeaders(), "Content-Type": "application/json" },
+          body: JSON.stringify({ name })
+        });
+
+        const text = await res.text();
+        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+
+        document.getElementById("name").value = "";
+        await loadProjects();
+      } catch (e) {
+        setMsg(String(e));
+      }
+    }
+
+    function escapeHtml(s){
+      return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+    }
+
+    loadProjects();
+</script>
+</body>
+</html>

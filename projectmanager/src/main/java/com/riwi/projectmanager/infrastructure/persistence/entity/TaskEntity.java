@@ -1,5 +1,6 @@
 package com.riwi.projectmanager.infrastructure.persistence.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
@@ -17,11 +18,15 @@ public class TaskEntity {
     @Id
     private UUID id;
 
+    @Column(nullable = false)
     private UUID projectId;
 
+    @Column(nullable = false)
     private String title;
 
-    private boolean completed;
+    @Column(nullable = false)
+    private boolean completed = false;
 
-    private boolean deleted;
+    @Column(nullable = false)
+    private boolean deleted = false;
 }

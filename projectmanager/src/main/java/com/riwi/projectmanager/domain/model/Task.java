@@ -9,7 +9,6 @@ import java.util.UUID;
 
 @Getter
 @AllArgsConstructor
-@NoArgsConstructor(force = true)
 @EqualsAndHashCode(of = "id")
 public class Task {
 
@@ -21,12 +20,9 @@ public class Task {
     private boolean deleted;
 
     public void complete() {
-        if (deleted) {
-            throw new IllegalStateException("Task is deleted");
-        }
-        if (completed) {
-            throw new IllegalStateException("Task already completed");
-        }
+        if (deleted) throw new IllegalStateException("Task is deleted");
+        if (completed) throw new IllegalStateException("Task already completed");
         this.completed = true;
     }
 }
+

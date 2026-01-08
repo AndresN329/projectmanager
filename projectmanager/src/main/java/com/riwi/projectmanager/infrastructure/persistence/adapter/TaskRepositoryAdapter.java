@@ -30,7 +30,10 @@ public class TaskRepositoryAdapter implements TaskRepositoryPort {
 
     @Override
     public List<Task> findActiveByProjectId(UUID projectId) {
-        return List.of();
+        return repo.findByProjectIdAndDeletedFalse(projectId)
+                .stream()
+                .map(mapper::toDomain)
+                .toList();
     }
 
     @Override

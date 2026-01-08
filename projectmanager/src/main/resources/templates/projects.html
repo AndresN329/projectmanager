@@ -17,6 +17,7 @@
     </style>
 </head>
 <body>
+
 <div class="row" style="justify-content:space-between;">
     <h2>Mis proyectos</h2>
     <div class="row">
@@ -47,69 +48,98 @@
     const tbody = document.getElementById("tbody");
 
     function token(){
-      return localStorage.getItem("token");
+        return localStorage.getItem("token");
     }
-    function authHeaders(){
-      const t = token();
-      if (!t) throw new Error("No hay token. Ve a /login");
-      return { "Authorization": "Bearer " + t };
-    }
-    function setMsg(t){ document.getElementById("msg").textContent = t || ""; }
 
-    function goLogin(){ window.location.href="/login"; }
-    function logout(){ localStorage.removeItem("token"); window.location.href="/login"; }
+    function authHeaders(){
+        const t = token();
+        if (!t) throw new Error("No hay token. Ve a /login");
+        return { "Authorization": "Bearer " + t };
+    }
+
+    function setMsg(t){
+        document.getElementById("msg").textContent = t || "";
+    }
+
+    function goLogin(){
+        window.location.href="/login";
+    }
+
+    function logout(){
+        localStorage.removeItem("token");
+        window.location.href="/login";
+    }
 
     async function loadProjects(){
-      setMsg("");
-      tbody.innerHTML = `<tr><td class="muted" colspan="3">Cargando...</td></tr>`;
-      try {
-        const res = await fetch(`${API}/projects`, { headers: authHeaders() });
-        const text = await res.text();
-        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+        setMsg("");
+        tbody.innerHTML = `<tr><td class="muted" colspan="3">Cargando...</td></tr>`;
 
-        const data = JSON.parse(text);
-        if (!Array.isArray(data) || data.length === 0){
-          tbody.innerHTML = `<tr><td class="muted" colspan="3">Sin proyectos</td></tr>`;
-          return;
+        try {
+            const res = await fetch(`${API}/projects?size=100`, {
+                headers: authHeaders()
+            });
+
+            const text = await res.text();
+            if (!res.ok) {
+                setMsg(text || `Error ${res.status}`);
+                return;
+            }
+
+            const data = JSON.parse(text);
+
+            // ✅ soporta Page<ProjectResponse> y listas simples
+            const projects = Array.isArray(data)
+                ? data
+                : (data.content ?? []);
+
+            if (projects.length === 0) {
+                tbody.innerHTML = `<tr><td class="muted" colspan="3">Sin proyectos</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = projects.map(p => `
+                <tr>
+                    <td><a href="/projects/${p.id}">${escapeHtml(p.name)}</a></td>
+                    <td>${escapeHtml(p.status)}</td>
+                    <td class="muted">${p.id}</td>
+                </tr>
+            `).join("");
+
+        } catch (e) {
+            setMsg(String(e));
+            tbody.innerHTML = `<tr><td class="muted" colspan="3">Error</td></tr>`;
         }
-
-        tbody.innerHTML = data.map(p => `
-          <tr>
-            <td><a href="/projects/${p.id}">${escapeHtml(p.name)}</a></td>
-            <td>${escapeHtml(p.status)}</td>
-            <td class="muted">${p.id}</td>
-          </tr>
-        `).join("");
-      } catch (e) {
-        setMsg(String(e));
-        tbody.innerHTML = `<tr><td class="muted" colspan="3">Error</td></tr>`;
-      }
     }
 
     async function createProject(){
-      setMsg("");
-      const name = document.getElementById("name").value.trim();
-      if (!name) return setMsg("Nombre requerido");
+        setMsg("");
+        const name = document.getElementById("name").value.trim();
+        if (!name) return setMsg("Nombre requerido");
 
-      try {
-        const res = await fetch(`${API}/projects`, {
-          method: "POST",
-          headers: { ...authHeaders(), "Content-Type": "application/json" },
-          body: JSON.stringify({ name })
-        });
+        try {
+            const res = await fetch(`${API}/projects`, {
+                method: "POST",
+                headers: {
+                    ...authHeaders(),
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({ name })
+            });
 
-        const text = await res.text();
-        if (!res.ok) return setMsg(text || `Error ${res.status}`);
+            const text = await res.text();
+            if (!res.ok) return setMsg(text || `Error ${res.status}`);
 
-        document.getElementById("name").value = "";
-        await loadProjects();
-      } catch (e) {
-        setMsg(String(e));
-      }
+            document.getElementById("name").value = "";
+            await loadProjects();
+        } catch (e) {
+            setMsg(String(e));
+        }
     }
 
     function escapeHtml(s){
-      return String(s ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+        return String(s ?? "").replace(/[&<>"']/g, m =>
+            ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])
+        );
     }
 
     loadProjects();

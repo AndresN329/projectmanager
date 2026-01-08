@@ -16,6 +16,7 @@
 </head>
 <body>
 <h2>Project Manager</h2>
+
 <div class="card">
     <label>Email</label>
     <input id="email" type="email" placeholder="coder@riwi.com" />
@@ -33,13 +34,14 @@
 
 <script>
     const API = "/api";
-
     function setMsg(t){ document.getElementById("msg").textContent = t || ""; }
 
     async function login(){
       setMsg("");
       const email = document.getElementById("email").value.trim();
       const password = document.getElementById("password").value.trim();
+
+      if (!email || !password) return setMsg("Email y password son requeridos");
 
       try {
         const res = await fetch(`${API}/auth/login`, {
@@ -51,11 +53,11 @@
         const text = await res.text();
         if (!res.ok) return setMsg(text || `Error ${res.status}`);
 
-        // soporta: token como string o como {token:"..."}
+        // soporta: token como string o como {token:"..."} / {accessToken:"..."} / etc
         let token = text;
         try {
           const json = JSON.parse(text);
-          token = json.token ?? text;
+          token = json.token ?? json.accessToken ?? json.jwt ?? json.access_token ?? text;
         } catch(_) {}
 
         token = (token || "").replaceAll('"', "").trim();

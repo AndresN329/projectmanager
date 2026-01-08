@@ -101,10 +101,12 @@ This project follows **Clean Architecture with Hexagonal approach**:
 
 ## 🔐 Security
 
-- JWT-based authentication
-- Protected endpoints require valid token
-- Users can only modify their own projects and tasks
-- Proper handling of `401 Unauthorized` and `403 Forbidden`
+- JWT-based authentication (stateless)
+- All write operations require authentication
+- Users can only access and modify their own projects and tasks
+- Clear distinction between:
+    - 401 Unauthorized (invalid or missing token)
+    - 403 Forbidden (user is not the resource owner)
 
 ---
 
@@ -123,19 +125,27 @@ JWT token can be provided directly from Swagger UI to test protected endpoints.
 
 Unit tests are focused on **business-critical use cases** and run **without Spring context**.
 
-Covered scenarios include:
+Covered business-critical rules include:
 
-- Project activation with tasks
-- Project activation without tasks (failure)
-- Unauthorized project activation
-- Task completion rules
-- Audit & notification triggering
+- Project activation only when at least one task exists
+- Project activation blocked for non-owners
+- Project activation blocked for invalid states (already active)
+- Tasks cannot be completed more than once (immutable task)
+- Audit logging and notification triggering on successful actions
+
+All tests are pure unit tests:
+- No Spring context is loaded
+- External dependencies are mocked using Mockito
+- Tests focus strictly on use-case behavior
+
 
 Tests are located in:
 
 ```text
 src/test/java/com/riwi/projectmanager/application/service
 ```
+
+- Unit testing focused on validating business rules instead of framework behavior
 
 ---
 

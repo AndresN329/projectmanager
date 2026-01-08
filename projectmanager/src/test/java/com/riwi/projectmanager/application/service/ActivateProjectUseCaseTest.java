@@ -25,6 +25,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class ActivateProjectUseCaseTest {
 
+    // Mocks for all external dependencies of the use case
     @Mock
     ProjectRepositoryPort projectRepo;
     @Mock
@@ -36,6 +37,7 @@ class ActivateProjectUseCaseTest {
     @Mock
     NotificationPort notification;
 
+    // System under test
     ActivateProjectService service;
 
     UUID projectId = UUID.randomUUID();
@@ -43,6 +45,7 @@ class ActivateProjectUseCaseTest {
 
     @BeforeEach
     void setUp() {
+        // Create the use case with mocked dependencies
         service = new ActivateProjectService(
                 projectRepo, taskRepo, currentUser, audit, notification
         );
@@ -50,6 +53,7 @@ class ActivateProjectUseCaseTest {
 
     @Test
     void ActivateProject_WithTasks_ShouldSucceed() {
+        // GIVEN a draft project owned by the current user and at least one active task
         Project project = new Project(projectId, ownerId, "Test", ProjectStatus.DRAFT, false);
 
         when(projectRepo.findById(projectId)).thenReturn(Optional.of(project));
@@ -58,8 +62,10 @@ class ActivateProjectUseCaseTest {
         ));
         when(currentUser.getCurrentUserId()).thenReturn(ownerId);
 
+        // WHEN the project is activated
         service.activate(projectId);
 
+        // THEN the project status changes to ACTIVE and side effects are triggered
         assertEquals(ProjectStatus.ACTIVE, project.getStatus());
         verify(projectRepo).save(project);
         verify(audit).register("PROJECT_ACTIVATED", projectId);
@@ -68,24 +74,41 @@ class ActivateProjectUseCaseTest {
 
     @Test
     void ActivateProject_WithoutTasks_ShouldFail() {
+        // GIVEN a draft project without any tasks
         Project project = new Project(projectId, ownerId, "Test", ProjectStatus.DRAFT, false);
 
         when(projectRepo.findById(projectId)).thenReturn(Optional.of(project));
         when(taskRepo.findActiveByProjectId(projectId)).thenReturn(List.of());
         when(currentUser.getCurrentUserId()).thenReturn(ownerId);
 
+        // THEN activating the project is not allowed
         assertThrows(InvalidProjectStateException.class,
                 () -> service.activate(projectId));
     }
 
     @Test
     void ActivateProject_ByNonOwner_ShouldFail() {
+        // GIVEN a project owned by another user
         Project project = new Project(projectId, ownerId, "Test", ProjectStatus.DRAFT, false);
 
         when(projectRepo.findById(projectId)).thenReturn(Optional.of(project));
         when(currentUser.getCurrentUserId()).thenReturn(UUID.randomUUID());
 
+        // THEN a non-owner cannot activate the project
         assertThrows(UnauthorizedActionException.class,
+                () -> service.activate(projectId));
+    }
+
+    @Test
+    void ActivateProject_AlreadyActive_ShouldFail() {
+        // GIVEN a project that is already ACTIVE
+        Project project = new Project(projectId, ownerId, "Test", ProjectStatus.ACTIVE, false);
+
+        when(projectRepo.findById(projectId)).thenReturn(Optional.of(project));
+        when(currentUser.getCurrentUserId()).thenReturn(ownerId);
+
+        // THEN activating an already active project is not allowed
+        assertThrows(InvalidProjectStateException.class,
                 () -> service.activate(projectId));
     }
 }

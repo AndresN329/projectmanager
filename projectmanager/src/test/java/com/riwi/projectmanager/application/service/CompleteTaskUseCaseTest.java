@@ -24,6 +24,7 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CompleteTaskUseCaseTest {
 
+    // Mocks for external dependencies
     @Mock
     TaskRepositoryPort taskRepo;
     @Mock
@@ -35,6 +36,7 @@ class CompleteTaskUseCaseTest {
     @Mock
     NotificationPort notification;
 
+    // System under test
     CompleteTaskService service;
 
     UUID taskId = UUID.randomUUID();
@@ -43,6 +45,7 @@ class CompleteTaskUseCaseTest {
 
     @BeforeEach
     void setUp() {
+        // Create the use case with mocked dependencies
         service = new CompleteTaskService(
                 taskRepo, projectRepo, currentUser, audit, notification
         );
@@ -50,6 +53,7 @@ class CompleteTaskUseCaseTest {
 
     @Test
     void CompleteTask_AlreadyCompleted_ShouldFail() {
+        // GIVEN a task that is already completed and owned by the current user
         Task task = new Task(taskId, projectId, "task", true, false);
 
         when(taskRepo.findById(taskId)).thenReturn(Optional.of(task));
@@ -57,12 +61,14 @@ class CompleteTaskUseCaseTest {
                 .thenReturn(Optional.of(new Project(projectId, ownerId, "P", ProjectStatus.ACTIVE, false)));
         when(currentUser.getCurrentUserId()).thenReturn(ownerId);
 
+        // THEN completing an already completed task is not allowed
         assertThrows(BusinessException.class,
                 () -> service.complete(taskId));
     }
 
     @Test
     void CompleteTask_ShouldGenerateAuditAndNotification() {
+        // GIVEN a pending task owned by the current user
         Task task = new Task(taskId, projectId, "task", false, false);
 
         when(taskRepo.findById(taskId)).thenReturn(Optional.of(task));
@@ -70,8 +76,10 @@ class CompleteTaskUseCaseTest {
                 .thenReturn(Optional.of(new Project(projectId, ownerId, "P", ProjectStatus.ACTIVE, false)));
         when(currentUser.getCurrentUserId()).thenReturn(ownerId);
 
+        // WHEN the task is completed
         service.complete(taskId);
 
+        // THEN the task is marked as completed and side effects are triggered
         assertTrue(task.isCompleted());
         verify(taskRepo).save(task);
         verify(audit).register("TASK_COMPLETED", taskId);
@@ -80,6 +88,7 @@ class CompleteTaskUseCaseTest {
 
     @Test
     void CompleteTask_ByNonOwner_ShouldFail() {
+        // GIVEN a task owned by another user
         Task task = new Task(taskId, projectId, "task", false, false);
 
         when(taskRepo.findById(taskId)).thenReturn(Optional.of(task));
@@ -87,6 +96,7 @@ class CompleteTaskUseCaseTest {
                 .thenReturn(Optional.of(new Project(projectId, ownerId, "P", ProjectStatus.ACTIVE, false)));
         when(currentUser.getCurrentUserId()).thenReturn(UUID.randomUUID());
 
+        // THEN a non-owner cannot complete the task
         assertThrows(UnauthorizedActionException.class,
                 () -> service.complete(taskId));
     }

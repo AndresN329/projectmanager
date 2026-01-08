@@ -39,6 +39,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
+        // No token -> continue (public endpoints can still work)
         if (header == null || !header.startsWith("Bearer ")) {
             chain.doFilter(request, response);
             return;
@@ -54,10 +55,14 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             auth.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(auth);
 
-        } catch (Exception ignored) {
-            SecurityContextHolder.clearContext();
-        }
+            chain.doFilter(request, response);
 
-        chain.doFilter(request, response);
+        } catch (Exception ex) {
+            // Token was provided but is invalid/expired -> 401
+            SecurityContextHolder.clearContext();
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            response.setContentType("application/json");
+            response.getWriter().write("{\"message\":\"Invalid or expired token\"}");
+        }
     }
 }

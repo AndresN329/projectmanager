@@ -4,6 +4,7 @@ import com.riwi.projectmanager.domain.model.Project;
 import com.riwi.projectmanager.domain.ports.out.ProjectRepositoryPort;
 import com.riwi.projectmanager.infrastructure.persistence.mapper.ProjectMapper;
 import com.riwi.projectmanager.infrastructure.persistence.repository.JpaProjectRepository;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -36,7 +37,8 @@ public class ProjectRepositoryAdapter implements ProjectRepositoryPort {
 
     @Override
     public List<Project> findAllByOwnerId(UUID ownerId) {
-        return repo.findByOwnerIdAndDeletedFalse(ownerId)
+        return repo.findByOwnerIdAndDeletedFalse(ownerId, Pageable.unpaged())
+                .getContent()
                 .stream()
                 .map(mapper::toDomain)
                 .toList();

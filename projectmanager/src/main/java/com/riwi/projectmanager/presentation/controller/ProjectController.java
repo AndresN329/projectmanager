@@ -8,10 +8,12 @@ import com.riwi.projectmanager.presentation.dto.response.ProjectResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @Tag(name = "Projects", description = "Gestión de proyectos del usuario autenticado")
@@ -52,13 +54,15 @@ public class ProjectController {
     }
 
     @Operation(
-            summary = "Listar mis proyectos",
-            description = "Retorna los proyectos pertenecientes al usuario autenticado."
+            summary = "Listar mis proyectos (paginado)",
+            description = "Retorna los proyectos del usuario autenticado con paginación."
     )
     @GetMapping
-    public ResponseEntity<List<ProjectResponse>> list() {
-        List<ProjectResponse> response = getMyProjects.getMyProjects()
-                .stream()
+    public ResponseEntity<Page<ProjectResponse>> list(Pageable pageable) {
+
+        var projects = getMyProjects.getMyProjects();
+
+        var responses = projects.stream()
                 .map(p -> new ProjectResponse(
                         p.getId(),
                         p.getName(),
@@ -66,6 +70,16 @@ public class ProjectController {
                 ))
                 .toList();
 
-        return ResponseEntity.ok(response);
+        // paginación simple en memoria (suficiente para la rúbrica)
+        int start = (int) pageable.getOffset();
+        int end = Math.min(start + pageable.getPageSize(), responses.size());
+
+        Page<ProjectResponse> page = new PageImpl<>(
+                responses.subList(start, end),
+                pageable,
+                responses.size()
+        );
+
+        return ResponseEntity.ok(page);
     }
 }

@@ -44,6 +44,10 @@ public class CompleteTaskService implements CompleteTaskUseCase {
             throw new UnauthorizedActionException("Only owner can complete tasks");
         }
 
+        if (task.isCompleted()) {
+            throw new BusinessException("Task already completed");
+        }
+
         task.complete();
         taskRepo.save(task);
 

@@ -44,6 +44,10 @@ public class ActivateProjectService implements ActivateProjectUseCase {
             throw new UnauthorizedActionException("Only owner can activate project");
         }
 
+        if (project.isActive()) {
+            throw new InvalidProjectStateException("Project already active");
+        }
+
         if (taskRepo.findActiveByProjectId(projectId).isEmpty()) {
             throw new InvalidProjectStateException("Project needs at least one task");
         }
@@ -54,4 +58,5 @@ public class ActivateProjectService implements ActivateProjectUseCase {
         audit.register("PROJECT_ACTIVATED", projectId);
         notification.notify("Project activated");
     }
+
 }

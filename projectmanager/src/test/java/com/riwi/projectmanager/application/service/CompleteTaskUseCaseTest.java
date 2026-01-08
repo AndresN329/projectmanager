@@ -1,5 +1,6 @@
 package com.riwi.projectmanager.application.service;
 
+import com.riwi.projectmanager.domain.exception.BusinessException;
 import com.riwi.projectmanager.domain.exception.UnauthorizedActionException;
 import com.riwi.projectmanager.domain.model.Project;
 import com.riwi.projectmanager.domain.model.ProjectStatus;
@@ -56,7 +57,7 @@ class CompleteTaskUseCaseTest {
                 .thenReturn(Optional.of(new Project(projectId, ownerId, "P", ProjectStatus.ACTIVE, false)));
         when(currentUser.getCurrentUserId()).thenReturn(ownerId);
 
-        assertThrows(IllegalStateException.class,
+        assertThrows(BusinessException.class,
                 () -> service.complete(taskId));
     }
 
@@ -73,7 +74,6 @@ class CompleteTaskUseCaseTest {
 
         assertTrue(task.isCompleted());
         verify(taskRepo).save(task);
-
         verify(audit).register("TASK_COMPLETED", taskId);
         verify(notification).notify(anyString());
     }

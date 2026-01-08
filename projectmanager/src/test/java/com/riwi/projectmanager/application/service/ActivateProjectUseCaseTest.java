@@ -61,7 +61,6 @@ class ActivateProjectUseCaseTest {
         service.activate(projectId);
 
         assertEquals(ProjectStatus.ACTIVE, project.getStatus());
-
         verify(projectRepo).save(project);
         verify(audit).register("PROJECT_ACTIVATED", projectId);
         verify(notification).notify(anyString());
@@ -84,9 +83,6 @@ class ActivateProjectUseCaseTest {
         Project project = new Project(projectId, ownerId, "Test", ProjectStatus.DRAFT, false);
 
         when(projectRepo.findById(projectId)).thenReturn(Optional.of(project));
-        when(taskRepo.findActiveByProjectId(projectId)).thenReturn(List.of(
-                new Task(UUID.randomUUID(), projectId, "task", false, false)
-        ));
         when(currentUser.getCurrentUserId()).thenReturn(UUID.randomUUID());
 
         assertThrows(UnauthorizedActionException.class,

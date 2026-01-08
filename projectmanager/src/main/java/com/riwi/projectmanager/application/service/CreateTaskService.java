@@ -30,6 +30,10 @@ public class CreateTaskService implements CreateTaskUseCase {
     @Override
     public UUID create(UUID projectId, String title) {
 
+        if (title == null || title.isBlank()) {
+            throw new BusinessException("Task title is required");
+        }
+
         Project project = projectRepo.findById(projectId)
                 .orElseThrow(() -> new BusinessException("Project not found"));
 

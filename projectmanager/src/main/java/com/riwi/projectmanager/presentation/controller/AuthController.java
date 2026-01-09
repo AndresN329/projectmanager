@@ -6,6 +6,8 @@ import com.riwi.projectmanager.presentation.dto.request.RegisterRequest;
 import com.riwi.projectmanager.presentation.dto.response.RegisterResponse;
 import com.riwi.projectmanager.presentation.dto.response.TokenResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -26,7 +28,9 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest body) {
         var id = auth.register(body.getUsername(), body.getEmail(), body.getPassword());
-        return ResponseEntity.ok(new RegisterResponse(id.toString()));
+        return ResponseEntity
+                .status(201)
+                .body(new RegisterResponse(id.toString()));
     }
 
     @Operation(summary = "Login", description = "Valida credenciales y retorna un JWT.")

@@ -5,7 +5,8 @@ import com.riwi.projectmanager.domain.exception.InvalidProjectStateException;
 import com.riwi.projectmanager.domain.exception.UnauthorizedActionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
 
@@ -13,17 +14,23 @@ import java.util.Map;
 public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedActionException.class)
-    public ResponseEntity<?> forbidden(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", ex.getMessage()));
+    public ResponseEntity<?> unauthorized(RuntimeException ex) {
+        return ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler({InvalidProjectStateException.class, IllegalStateException.class})
     public ResponseEntity<?> conflict(RuntimeException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", ex.getMessage()));
+        return ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(Map.of("error", ex.getMessage()));
     }
 
     @ExceptionHandler(BusinessException.class)
     public ResponseEntity<?> badRequest(RuntimeException ex) {
-        return ResponseEntity.badRequest().body(Map.of("error", ex.getMessage()));
+        return ResponseEntity
+                .badRequest()
+                .body(Map.of("error", ex.getMessage()));
     }
 }
